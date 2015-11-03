@@ -9,4 +9,7 @@
 
 ## 说明  
 暂时准备放到[letshareba.com](letshareba.com)上。  
-端口为 8082 
+端口为 8082   
+
+目前能登陆的帐号只有 flyover   
+并且只计算language和ppt这两个值
