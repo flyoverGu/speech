@@ -15,7 +15,7 @@ app.use(session(app));
 app.use(bodyparser());
 
 
-let port = 8080;
+let port = 8082;
 let api = '/api/';
 let users = ['flyover'];
 
