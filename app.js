@@ -53,30 +53,78 @@ app.use(route.post(api + 'saveScore', function*() {
         code: 1
     };
     if (!!body && !!body.to) {
-        Object.assign(body, {from: this.session.user});
+        Object.assign(body, {
+            from: this.session.user
+        });
         yield (cb) => {
-            mc(this.mongo).update({to: body.to, from: body.from}, body, {upsert: true}, (err, res) => cb(err, res));
+            mc(this.mongo).update({
+                to: body.to,
+                from: body.from
+            }, body, {
+                upsert: true
+            }, (err, res) => cb(err, res));
         }
     } else {
-        Object.assign(res, {code: 0, msg: 'not find body or to'});
+        Object.assign(res, {
+            code: 0,
+            msg: 'not find body or to'
+        });
     }
     this.body = res;
 }));
 
 app.use(route.get(api + 'rank', checkLogin));
-// 非常耗性能的接口
 app.use(route.get(api + 'rank', function*() {
-    let data = yield(cb) => {
-        mc(this.mongo).find({}).toArray((err, res) => cb(err, res));
-    }
+    let data =
+        yield (cb) => {
+            mc(this.mongo).find({}).toArray((err, res) => cb(err, res));
+        }
     let h = handleData(data);
     this.body = handleResult(h);
+}));
+
+app.use(route.get(api + 'random', checkLogin));
+app.use(route.get(api + 'random', function*() {
+    let d = new Date();
+    let time  = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+    let id = d.getTime();
+    let order = randomArray(users);
+    let data = { time: time, id: id, order: order};
+    mo(this.mongo).insert(data);
+    this.body = order;
+}));
+
+app.use(route.get(api + 'order', checkLogin));
+app.use(route.get(api + 'order', function*() {
+    let data = yield (cb) => {
+        mo(this.mongo).find().sort({id: -1}).limit(1).toArray((err, res) => cb(err, res));
+    }
+    if (data && data[0] && data[0].order) {
+        let order = data[0].order;
+        this.body = {order: order.indexOf(this.session.user)}
+    } else {
+        this.body = {order: -1};
+    }
+}));
+
+
+app.use(route.get(api + 'toWho', checkLogin));
+app.use(route.get(api + 'toWho', function*() {
+    this.body = {
+        to: "flyover"
+    };
 }));
 
 let handleResult = (data) => {
     let res = {};
     for (let to in data) {
         res[to] = calculate(data[to]);
+    }
+    for (let i in users) {
+        let user = users[i];
+        if (!res[user]) {
+            res[user] = 0;
+        }
     }
     return res;
 }
@@ -110,7 +158,22 @@ function* checkLogin(next) {
     }
 }
 
+let randomArray = (lists) => {
+    if (!lists) return [];
+    lists = JSON.parse(JSON.stringify(lists));
+    let res = [];
+    while(lists.length) {
+        let rn = randomInt(lists.length);
+        res.push(lists[rn]); 
+        lists.splice(rn, 1);
+    }
+    return res;
+}
+
+let randomInt = (max) => Math.floor(Math.random() * max);
+
 // mongo
 let mc = (mongo) => mongo.db('speech').collection('score');
+let mo = (mongo) => mongo.db('speech').collection('order');
 
 app.listen(port, () => console.log("start !!"));

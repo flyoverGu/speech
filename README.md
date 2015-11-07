@@ -4,7 +4,10 @@
 ## 实现接口  
 * /api/login        登入                    post    {user: xxx}
 * /api/saveScore    保存得分                post    {to:xxx, language: 1, ..} 
-* /api/rank         获取全部人员的得分      get 
+* /api/rank         获取全部人员的得分      get                                     {xx: xxx}
+* /api/random       随机所有用户的order     get                                     {xx: xxx}
+* /api/order        获取当前用户的order值   get                                     {order: xxx}
+* /api/toWho        获取本次是谁演讲        get                                     {to: xxx}
 
 
 ## 说明  
