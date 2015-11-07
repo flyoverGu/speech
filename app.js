@@ -3,6 +3,7 @@ let route = require('koa-route');
 let bodyparser = require('koa-bodyparser');
 let mongo = require('koa-mongo');
 let session = require('koa-session');
+let conf = require('./conf.json');
 
 let app = koa();
 app.keys = ['speech'];
@@ -17,7 +18,7 @@ app.use(bodyparser());
 
 let port = 8082;
 let api = '/api/';
-let users = ['flyover'];
+let users = conf.users;
 
 app.use(function*(next) {
     try {
@@ -57,17 +58,17 @@ app.use(route.post(api + 'saveScore', function*() {
             mc(this.mongo).update({to: body.to, from: body.from}, body, {upsert: true}, (err, res) => cb(err, res));
         }
     } else {
-        Object.assign(res, {code: 0, msg: 'not find body'});
+        Object.assign(res, {code: 0, msg: 'not find body or to'});
     }
     this.body = res;
 }));
 
 app.use(route.get(api + 'rank', checkLogin));
+// 非常耗性能的接口
 app.use(route.get(api + 'rank', function*() {
     let data = yield(cb) => {
         mc(this.mongo).find({}).toArray((err, res) => cb(err, res));
     }
-    console.log(data);
     let h = handleData(data);
     this.body = handleResult(h);
 }));
@@ -80,10 +81,10 @@ let handleResult = (data) => {
     return res;
 }
 
-let projects = ['language', 'ppt'];
+let skills = conf.skills;
 let calculate = (list) => {
     let res = 0;
-    list.map((item) => projects.map((p) => res += item[p] ? item[p] : 0));
+    list.map((item) => skills.map((p) => res += item[p] ? item[p] : 0));
     return res;
 }
 
