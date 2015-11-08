@@ -7,7 +7,9 @@ let conf = require('./conf.json');
 
 let app = koa();
 let api = '/api/';
-let {port, users, skills}  = conf;
+let {
+    port, users, skills
+} = conf;
 
 app.keys = ['speech'];
 app.use(mongo({
@@ -56,15 +58,23 @@ app.use(route.post(api + 'saveScore', function*() {
     };
     if (!!body && !!body.to) {
         Object.assign(body, {
-            from: this.session.user
+            from: getSessionUser(this.session, this.header)
         });
-        yield (cb) => {
-            mc(this.mongo).update({
-                to: body.to,
-                from: body.from
-            }, body, {
-                upsert: true
-            }, (err, res) => cb(err, res));
+
+        if (body.to == body.from) {
+            Object.assign(res, {
+                code: 2,
+                msg: 'can not score self'
+            });
+        } else {
+            yield (cb) => {
+                mc(this.mongo).update({
+                    to: body.to,
+                    from: body.from
+                }, body, {
+                    upsert: true
+                }, (err, res) => cb(err, res));
+            }
         }
     } else {
         Object.assign(res, {
@@ -77,11 +87,13 @@ app.use(route.post(api + 'saveScore', function*() {
 
 app.use(route.get(api + 'rank', function*() {
     let data =
-        yield (cb) => {
-            mc(this.mongo).find({}).toArray((err, res) => cb(err, res));
-        }
+        yield (cb) => mc(this.mongo).find({}).toArray((err, res) => cb(err, res));
+    let orderData =
+        yield (cb) => mo(this.mongo).find().sort({
+            id: -1
+        }).limit(1).toArray((err, res) => cb(err, res))
     let h = handleData(data);
-    this.body = handleResult(h);
+    this.body = handleResult(h, orderData[0].order);
 }));
 
 app.use(route.get(api + 'random', function*() {
@@ -106,7 +118,7 @@ app.use(route.get(api + 'order', function*() {
     if (data && data[0] && data[0].order) {
         let order = data[0].order;
         this.body = {
-            order: order.indexOf(this.session.user)
+            order: order.indexOf(getSessionUser(this.session, this.header)) + 1
         };
     } else {
         this.body = {
@@ -121,12 +133,17 @@ app.use(route.get(api + 'toWho', function*() {
     };
 }));
 
-let handleResult = (data) => {
+let handleResult = (data, orders) => {
     let res = {};
-    users.map((user, i) => res[user] = {order: i + 1, score: 0});
+    orders.map((user, i) => res[user] = {
+        order: i + 1,
+        score: 0
+    });
     for (let to in data) {
         res[to] = res[to] || {};
-        Object.assign(res[to], {score: calculate(data[to])});
+        Object.assign(res[to], {
+            score: calculate(data[to])
+        });
     }
     return res;
 }
@@ -149,7 +166,7 @@ let handleData = (data) => {
 }
 
 function* checkLogin(path, next) {
-    let user = this.session.user || this.header.token;
+    let user = getSessionUser(this.session, this.header);
     console.log(user);
     if (user) {
         if (typeof path === 'string') {
@@ -176,6 +193,8 @@ let randomArray = (lists) => {
     }
     return res;
 }
+
+let getSessionUser = (session, header) => session.user || header.token;
 
 let randomInt = (max) => Math.floor(Math.random() * max);
 
