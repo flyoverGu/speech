@@ -100,7 +100,12 @@ app.use(route.get(api + 'random', function*() {
     let d = new Date();
     let time = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
     let id = d.getTime();
-    let order = randomArray(users);
+    let randomOrder = randomArray(users);
+    let order = [];
+    randomOrder.map((user, index) => order.push({
+        'user': user,
+        'order': index + 1
+    }));
     let data = {
         time: time,
         id: id,
@@ -114,11 +119,29 @@ app.use(route.get(api + 'order', function*() {
     let data =
         yield (cb) => mo(this.mongo).find().sort({
             id: -1
-        }).limit(1).toArray((err, res) => cb(err, res))
+        }).limit(1).toArray((err, res) => cb(err, res));
     if (data && data[0] && data[0].order) {
         let order = data[0].order;
+        let user = getSessionUser(this.session, this.header);
+        let index = -1;
+        order.map((o) => {
+            if (o.user === user) {
+                index = o.order;
+                // 表示被访问过了
+                o.status = 1;
+            }
+        });
+
+        mo(this.mongo).update({
+            'id': data[0].id
+        }, {
+            $set: {
+                "order": order
+            }
+        });
+
         this.body = {
-            order: order.indexOf(getSessionUser(this.session, this.header)) + 1
+            order: index
         };
     } else {
         this.body = {
@@ -127,17 +150,15 @@ app.use(route.get(api + 'order', function*() {
     }
 }));
 
-app.use(route.get(api + 'toWho', function*() {
-    this.body = {
-        to: "flyover"
-    };
-}));
-
 let handleResult = (data, orders) => {
     let res = {};
-    orders.map((user, i) => res[user] = {
-        order: i + 1,
-        score: 0
+    orders.map((user) => {
+        if (user.status) {
+            res[user.user] = {
+                order: user.order,
+                score: 0
+            }
+        }
     });
     for (let to in data) {
         res[to] = res[to] || {};
