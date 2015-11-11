@@ -189,13 +189,15 @@ let handleData = (data) => {
 function* checkLogin(path, next) {
     let user = getSessionUser(this.session, this.header);
     console.log(user);
-    if (user) {
+    if (~users.indexOf(user)) {
         if (typeof path === 'string') {
             yield next;
         } else {
             yield path;
         }
     } else {
+        this.session.user = '';
+        this.set('token', '');
         this.body = {
             code: 0,
             msg: "no login"
