@@ -4,6 +4,7 @@ let bodyparser = require('koa-bodyparser');
 let mongo = require('koa-mongo');
 let session = require('koa-session');
 let conf = require('./conf.json');
+let md5 = require('md5');
 
 let app = koa();
 let api = '/api/';
@@ -36,14 +37,12 @@ app.use(route.post('/login', function*() {
         user
     } = this.request.body;
     if (~users.indexOf(user)) {
-        this.session.user = user;
-        this.set('token', user);
+        setSessionUser(this, user);
         this.body = {
             code: 1
         };
     } else {
-        this.session.user = '';
-        this.set('token', '');
+        setSessionUser(this);
         this.body = {
             code: 0,
             msg: 'not find user'
@@ -125,7 +124,7 @@ app.use(route.get(api + 'order', function*() {
         let user = getSessionUser(this.session, this.header);
         let index = -1;
         order.map((o) => {
-            if (o.user === user) {
+            if (md5(o.user) === user) {
                 index = o.order;
                 // 表示被访问过了
                 o.status = 1;
@@ -188,16 +187,14 @@ let handleData = (data) => {
 
 function* checkLogin(path, next) {
     let user = getSessionUser(this.session, this.header);
-    console.log(user);
-    if (~users.indexOf(user)) {
+    if (isLogin(user)) {
         if (typeof path === 'string') {
             yield next;
         } else {
             yield path;
         }
     } else {
-        this.session.user = '';
-        this.set('token', '');
+        setSessionUser(this);
         this.body = {
             code: 0,
             msg: "no login"
@@ -218,6 +215,24 @@ let randomArray = (lists) => {
 }
 
 let getSessionUser = (session, header) => session.user || header.token;
+let setSessionUser = (_this, user) => {
+    let m = '';
+    if (user) {
+        m = md5(user);
+    } 
+    console.log(m, user);
+    _this.session.user = m;
+    _this.set('token', m);
+}
+let isLogin = (user) => {
+    let login = false;
+    users.map(function(u) {
+        if (md5(u) === user) {
+            login = true;
+        }
+    });
+    return login;
+}
 
 let randomInt = (max) => Math.floor(Math.random() * max);
 
