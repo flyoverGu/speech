@@ -5,6 +5,9 @@ let mongo = require('koa-mongo');
 let session = require('koa-session');
 let conf = require('./conf.json');
 let md5 = require('md5');
+// log
+var log4js = require('log4js');
+var logger = log4js.getLogger();
 
 let app = koa();
 let api = '/api/';
@@ -25,7 +28,7 @@ app.use(function*(next) {
     try {
         yield next;
     } catch (e) {
-        console.log(e);
+        logger.debug(e);
     }
 });
 
@@ -220,7 +223,7 @@ let setSessionUser = (_this, user) => {
     if (user) {
         m = md5(user);
     } 
-    console.log(m, user);
+    logger.debug(m , user);
     _this.session.user = m;
     _this.set('token', m);
 }
@@ -240,4 +243,4 @@ let randomInt = (max) => Math.floor(Math.random() * max);
 let mc = (mongo) => mongo.db('speech').collection('score');
 let mo = (mongo) => mongo.db('speech').collection('order');
 
-app.listen(port, () => console.log("start !!"));
+app.listen(port, () => logger.debug("start !!"));
