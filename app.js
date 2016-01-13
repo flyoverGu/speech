@@ -18,7 +18,10 @@ let {
 app.keys = ['speech'];
 app.use(mongo({
     host: "localhost",
-    port: 27017
+    port: 27017,
+    user: "flyover", 
+    pass: "internal",
+    db: 'speech'
 }));
 app.use(session(app));
 app.use(bodyparser());
