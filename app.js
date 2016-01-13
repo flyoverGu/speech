@@ -19,7 +19,7 @@ app.keys = ['speech'];
 app.use(mongo({
     host: "localhost",
     port: 27017,
-    user: "flyover", 
+    user: "speech", 
     pass: "internal",
     db: 'speech'
 }));
